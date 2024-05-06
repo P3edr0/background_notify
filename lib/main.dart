@@ -8,13 +8,19 @@ import 'package:background_notify/widgets/textform_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get_it/get_it.dart';
 import 'package:http/http.dart' as http;
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:notifications/notifications.dart';
 
+GetIt getIt = GetIt.instance;
+
 Future<void> main() async {
+  getIt.registerLazySingleton<HomeController>(() => HomeController());
+
   WidgetsFlutterBinding.ensureInitialized();
   await initializeService();
+
   runApp(const MyApp());
 }
 
@@ -49,7 +55,7 @@ Future<void> postNofify(
     {required String title, required String message}) async {
   // Parâmetros da requisição
 
-  HomeController controller = HomeController();
+  HomeController controller = GetIt.instance<HomeController>();
 
   FormEntity formEntity = await controller.startForm();
 
@@ -116,15 +122,17 @@ void onData(NotificationEvent event) async {
 }
 
 Future<void> onStart(ServiceInstance service) async {
-  HomeController homeController = HomeController();
-  Notifications? notifications;
+  // HomeController controller = GetIt.instance<HomeController>();
+  getIt.registerLazySingleton<HomeController>(() => HomeController());
 
-  notifications = Notifications();
+  HomeController controller = GetIt.instance<HomeController>();
+
+  controller.notifications = Notifications();
 
   try {
-    FormEntity temFormEntity = await homeController.startForm();
+    FormEntity temFormEntity = await controller.startForm();
     if ((temFormEntity.email) != "") {
-      homeController.isMonitoring = false;
+      controller.isMonitoring = false;
       FlutterLocalNotificationsPlugin().show(
         1,
         'Start',
@@ -140,9 +148,9 @@ Future<void> onStart(ServiceInstance service) async {
         ),
       );
 
-      notifications.notificationStream!.listen(onData);
+      controller.notify = Notifications().notificationStream!.listen(onData);
     } else {
-      homeController.isMonitoring = true;
+      controller.isMonitoring = true;
 
       FlutterLocalNotificationsPlugin().show(
         1,
@@ -173,9 +181,7 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
-  StreamSubscription<NotificationEvent>? notify;
-
-  HomeController controller = HomeController();
+  HomeController controller = GetIt.instance<HomeController>();
   final _messangerKey = GlobalKey<ScaffoldMessengerState>();
   MaskTextInputFormatter phoneMask = MaskTextInputFormatter(
       mask: '(##) #####-####',
@@ -224,7 +230,7 @@ class _MyAppState extends State<MyApp> {
                     const SizedBox(
                       height: 10,
                     ),
-                    const Text('Version: 1.0.0.'),
+                    const Text('Version: 1.1.0.'),
                     const SizedBox(
                       height: 10,
                     ),
@@ -322,7 +328,9 @@ class _MyAppState extends State<MyApp> {
                                       textAlign: TextAlign.center,
                                     )));
                                   } else {
-                                    controller.isMonitoring = true;
+                                    controller.notify = Notifications()
+                                        .notificationStream!
+                                        .listen(onData);
                                     FlutterLocalNotificationsPlugin().show(
                                       1,
                                       'Start',
@@ -337,9 +345,9 @@ class _MyAppState extends State<MyApp> {
                                         ),
                                       ),
                                     );
-                                    notify = Notifications()
-                                        .notificationStream!
-                                        .listen(onData);
+                                    setState(() {
+                                      controller.isMonitoring = true;
+                                    });
                                   }
                                 },
                                 child: const Row(
@@ -378,54 +386,7 @@ class _MyAppState extends State<MyApp> {
                         shape: MaterialStatePropertyAll(RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30.0))),
                       ),
-                      onPressed: () async {
-                        final service = FlutterBackgroundService();
-
-                        String result = await controller.fetchForm();
-
-                        if (!controller.isMonitoring &&
-                            result == "Dados Recuperados") {
-                          await service.startService();
-
-                          FlutterLocalNotificationsPlugin().show(
-                            1,
-                            'Start',
-                            'Monitorando notificações.',
-                            const NotificationDetails(
-                              android: AndroidNotificationDetails(
-                                '',
-                                'MY FOREGROUND SERVICE',
-                                icon: 'ic_bg_service_small',
-                                ongoing: false,
-                                number: 3,
-                              ),
-                            ),
-                          );
-
-                          setState(() {
-                            controller.isMonitoring = true;
-                          });
-                        } else {
-                          await notify!.cancel();
-                          FlutterLocalNotificationsPlugin().show(
-                            1,
-                            'Stop',
-                            'Monitorando desabilitado.',
-                            const NotificationDetails(
-                              android: AndroidNotificationDetails(
-                                '',
-                                'MY FOREGROUND SERVICE',
-                                icon: 'ic_bg_service_small',
-                                ongoing: false,
-                                number: 3,
-                              ),
-                            ),
-                          );
-                          setState(() {
-                            controller.isMonitoring = false;
-                          });
-                        }
-                      },
+                      onPressed: () {},
                       child: Container(
                         height: 40,
                         alignment: Alignment.center,

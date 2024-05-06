@@ -1,13 +1,18 @@
+import "dart:async";
 import "dart:developer";
 
 import 'package:background_notify/entities/form_entity.dart';
 import "package:flutter/material.dart";
+import "package:notifications/notifications.dart";
 import "package:shared_preferences/shared_preferences.dart";
 
 class HomeController {
   TextEditingController emailController = TextEditingController();
   TextEditingController phoneController = TextEditingController();
   TextEditingController passwordController = TextEditingController();
+  StreamSubscription<NotificationEvent>? notify;
+  Notifications? notifications;
+
   bool isPassword = true;
   bool isMonitoring = true;
 
